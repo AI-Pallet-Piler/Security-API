@@ -1,9 +1,12 @@
 fastapi[standard]
-httpx
 rich
 pydantic
 uvicorn
-requests
 starlette
 pytest
 pydantic-settings
+PyJWT
+passlib[bcrypt]
+redis
+httpx
+python-multipart

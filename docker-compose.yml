@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  # Redis for token storage
+  redis:
+    image: redis:7-alpine
+    container_name: jwt-auth-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # JWT Auth Service
+  auth-service:
+    build: .
+    container_name: jwt-auth-service
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - jwt-auth-network
+
+  # Mock User Service (for testing)
+  mock-user-service:
+    image: python:3.12-slim
+    container_name: mock-user-service
+    command: >
+      bash -c "pip install --no-cache-dir fastapi uvicorn bcrypt httpx && python mock_user_service.py"
+    ports:
+      - "8001:8001"
+    volumes:
+      - .:/app
+    working_dir: /app
+    networks:
+      - jwt-auth-network
+
+networks:
+  jwt-auth-network:
+    driver: bridge
+
+volumes:
+  redis_data:
