@@ -41,7 +41,7 @@ class UserServiceClient:
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.post(
-                    f"{self.base_url}/api/auth/validate",
+                    f"{self.base_url}/api/v1/auth/validate",
                     json={"email": email, "password": password},
                     headers=self._get_headers()
                 )
@@ -81,7 +81,7 @@ class UserServiceClient:
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.get(
-                    f"{self.base_url}/api/users/{user_id}",
+                    f"{self.base_url}/api/v1/users/{user_id}",
                     headers=self._get_headers()
                 )
                 
@@ -120,7 +120,7 @@ class UserServiceClient:
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.get(
-                    f"{self.base_url}/api/users/by-email",
+                    f"{self.base_url}/api/v1/users/by-email",
                     params={"email": email},
                     headers=self._get_headers()
                 )
