@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from config import get_settings
 from models.user import (
     UserLogin,
+    UserBadgeLogin,
     TokenResponse,
     ValidateTokenResponse,
     ErrorResponse
@@ -26,7 +27,7 @@ from services.user_service_client import user_service_client
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/auth", tags=["Authentication"])
+router = APIRouter(prefix="/auth/v1", tags=["Authentication"])
 
 
 @router.post(
@@ -79,6 +80,64 @@ async def login(request: UserLogin) -> TokenResponse:
     )
     
     logger.info(f"User logged in: {user.email} (role: {user.role})")
+    
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        token_type="bearer",
+        expires_in=settings.access_token_expire_minutes * 60
+    )
+
+
+@router.post(
+    "/login-badge",
+    response_model=TokenResponse,
+    responses={
+        401: {"model": ErrorResponse, "description": "Invalid badge number"}
+    },
+    summary="Badge-based login for pickers",
+    description="Authenticate picker with badge number and receive access and refresh tokens"
+)
+async def login_badge(request: UserBadgeLogin) -> TokenResponse:
+    """
+    Authenticate user with badge number (for pickers).
+    
+    Returns:
+        TokenResponse with access_token, refresh_token, and expiration
+    """
+    # Get user by badge number from external user service
+    user = await user_service_client.get_user_by_badge(
+        badge_number=request.badge_number
+    )
+    
+    if user is None:
+        logger.warning(f"Failed badge login attempt for: {request.badge_number}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid badge number"
+        )
+    
+    # Create tokens
+    settings = get_settings()
+    access_token, access_jti = token_service.create_access_token(
+        user_id=user.id,
+        email=user.email,
+        role=user.role
+    )
+    refresh_token, refresh_jti = token_service.create_refresh_token(
+        user_id=user.id
+    )
+    
+    # Store refresh token in Redis
+    await redis_client.store_refresh_token(
+        jti=refresh_jti,
+        user_id=user.id,
+        email=user.email,
+        role=user.role,
+        expires_in_seconds=settings.refresh_token_expire_days * 86400
+    )
+    
+    logger.info(f"Picker logged in via badge: {request.badge_number} (user: {user.email}, role: {user.role})")
     
     return TokenResponse(
         access_token=access_token,
