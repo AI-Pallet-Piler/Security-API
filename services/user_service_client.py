@@ -41,7 +41,7 @@ class UserServiceClient:
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.post(
-                    f"{self.base_url}/api/auth/validate",
+                    f"{self.base_url}/api/v1/auth/validate",
                     json={"email": email, "password": password},
                     headers=self._get_headers()
                 )
@@ -81,7 +81,7 @@ class UserServiceClient:
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.get(
-                    f"{self.base_url}/api/users/{user_id}",
+                    f"{self.base_url}/api/v1/users/{user_id}",
                     headers=self._get_headers()
                 )
                 
@@ -120,7 +120,7 @@ class UserServiceClient:
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.get(
-                    f"{self.base_url}/api/users/by-email",
+                    f"{self.base_url}/api/v1/users/by-email",
                     params={"email": email},
                     headers=self._get_headers()
                 )
@@ -135,6 +135,46 @@ class UserServiceClient:
                     )
                 elif response.status_code == 404:
                     logger.debug(f"User not found: {email}")
+                    return None
+                else:
+                    logger.error(f"User service error: {response.status_code}")
+                    return None
+                    
+        except httpx.RequestError as e:
+            logger.error(f"Failed to connect to user service: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Unexpected error in user service client: {e}")
+            return None
+    
+    async def get_user_by_badge(self, badge_number: str) -> Optional[User]:
+        """
+        Get user by badge number from external service.
+        
+        Args:
+            badge_number: User badge number
+            
+        Returns:
+            User object if found, None if not found
+        """
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.get(
+                    f"{self.base_url}/api/v1/users/badge/{badge_number}",
+                    headers=self._get_headers()
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    return User(
+                        id=str(data.get("user_id", "")),
+                        email=data.get("email", ""),
+                        role=data.get("role", "user"),
+                        badge_number=data.get("badge_number", badge_number),
+                        hashed_password=data.get("hashed_password")
+                    )
+                elif response.status_code == 404:
+                    logger.debug(f"User not found with badge: {badge_number}")
                     return None
                 else:
                     logger.error(f"User service error: {response.status_code}")

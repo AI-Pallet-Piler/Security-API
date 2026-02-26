@@ -8,6 +8,10 @@ class User(BaseModel):
     id: str = Field(..., description="User ID from external service")
     email: str = Field(..., description="User email address")
     role: str = Field(..., description="User role for RBAC")
+    badge_number: Optional[str] = Field(
+        None,
+        description="Badge number (for picker identification)"
+    )
     hashed_password: Optional[str] = Field(
         None, 
         description="Hashed password (from external service)"
@@ -20,6 +24,11 @@ class UserLogin(BaseModel):
     """User login request model."""
     email: str = Field(..., description="User email address")
     password: str = Field(..., description="User password")
+
+
+class UserBadgeLogin(BaseModel):
+    """Badge-based login request model for pickers."""
+    badge_number: str = Field(..., description="User badge number")
 
 
 class UserCreate(BaseModel):
