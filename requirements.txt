@@ -1,0 +1,12 @@
+fastapi[standard]
+rich
+pydantic
+uvicorn
+starlette
+pytest
+pydantic-settings
+PyJWT
+passlib[bcrypt]
+redis
+httpx
+python-multipart
